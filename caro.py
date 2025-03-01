@@ -2,9 +2,9 @@ import pygame
 import random
 import math 
 # Kích thước cửa sổ trò chơi
-WIDTH = 600 # Tăng chiều cao cửa sổ, 100 pixel cho vùng mở rộng
+WIDTH = 600 # Tăng chiều rong cửa sổ, 100 pixel cho vùng mở rộng
 ROWS, COLS = 15, 15
-SQUARE_SIZE = WIDTH // COLS
+SQUARE_SIZE = WIDTH // COLS     #マス目のサイズ
 FOOTER_HEIGHT = 50  # Chiều cao vùng mở rộng phía dưới
 HEIGHT = 700 + FOOTER_HEIGHT
 Font = 'NotoSansJP-Light.ttf'  # Đảm bảo font này tồn tại trong thư mục
@@ -22,9 +22,9 @@ SKYBLUE = (0,191,255)
 SKYBLUE1 = (176, 226, 255)
 # Khởi tạo Pygame
 pygame.init()
-WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Caro 15x15')
-cup_image = pygame.image.load('cup_1.png')
+WIN = pygame.display.set_mode((WIDTH, HEIGHT))# vẽ màn hình.,
+pygame.display.set_caption('Caro 15x15')# ゲームの名前
+cup_image = pygame.image.load('cup_1.png')# import anhr
 cup_image = pygame.transform.scale(cup_image, (100, 100))
 
 # Khởi tạo bảng trò chơi (0 là ô trống, 1 là X, -1 là O)
@@ -79,7 +79,7 @@ def draw_extension_area():
     pygame.draw.rect(WIN, WHITE, back_button_rect)  # Vẽ nút màu trắng
     pygame.draw.rect(WIN, BLACK, back_button_rect, 2)  # Vẽ viền nút
 
-    back_label = font.render("戻り", True, BLACK)
+    back_label = font.render("戻り", True, BLACK) # ve nut quay tro lai
     WIN.blit(back_label, (back_button_rect.x + (back_button_rect.width - back_label.get_width()) // 2,
                           back_button_rect.y + (back_button_rect.height - back_label.get_height()) // 2))
     
@@ -519,10 +519,20 @@ def main():
                     click = False
                 if game_mode == 0:
                     handle_click(pos)  # Xử lý click cho người chơi
+                    
                 if game_mode == 1:
+                    if current_player == 1 and not winner and not final_winner:  # Lượt của nguoi (X)
+                        handle_click(pos)
+                        
                     if current_player == -1 and not winner and not final_winner:  # Lượt của máy (O)
-                        ai_move()  # AI tự động đánh
                         current_player = 1
+                        ai_move()  # AI tự động đánh
+                
+                        
+                        
+                        
+                            
+                                
                         
                 if final_winner:
                     continue  # Không xử lý thêm sự kiện nếu đã có người thắng
@@ -532,12 +542,11 @@ def main():
                     board = reset_board()
                     current_player = 1  # Khởi động lại lượt chơi
                     winner = None
-                    show_restart_message = False  # Tắt thông báo restart
                     click = True
+                    show_restart_message = False  # Tắt thông báo restart
                     turn_start_time = pygame.time.get_ticks()  # Đặt lại thời gian bắt đầu lượt
                 elif not winner:
                     handle_click(pos)  # Chỉ cho phép người chơi click nếu chưa có người thắng
-
                 # Kiểm tra thắng sau khi click (X hoặc O)
                 if check_win(board, 1):
                     winner = 'X が勝ち'
@@ -602,6 +611,7 @@ def main():
                     WIN.blit(reset_text, ((WIDTH - reset_text.get_width()) // 2, HEIGHT // 2 + cup_image.get_height() + 20))
                 elif winner:
                     reset_text = font.render('Click to Start', True, BLACK)
+                    
                     WIN.blit(reset_text, ((WIDTH - reset_text.get_width()) // 2, (HEIGHT - reset_text.get_height()) // 2))
                 else:
                     reset_text = False
