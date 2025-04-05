@@ -22,7 +22,7 @@ SKYBLUE = (0,191,255)
 SKYBLUE1 = (176, 226, 255)
 # Khởi tạo Pygame
 pygame.init()
-WIN = pygame.display.set_mode((WIDTH, HEIGHT))# vẽ màn hình.,
+WIN = pygame.display.set_mode((WIDTH, HEIGHT),pygame.RESIZABLE)# vẽ màn hình.,
 pygame.display.set_caption('Caro 15x15')# ゲームの名前
 cup_image = pygame.image.load('cup_1.png')# import anhr
 cup_image = pygame.transform.scale(cup_image, (100, 100))
@@ -290,82 +290,108 @@ def check_line(board, player, row, col, dx, dy):
         else:
             break
     return count == 5
+def check_double_threat(row, col, player):
+    """
+    Kiểm tra nếu ô trống tại (row, col) có thể tạo ra 2 đường thắng đồng thời.
+    """
+    threats = 0
+    # Kiểm tra tất cả các hướng (ngang, dọc, chéo)
+    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+        count = 1  # Bắt đầu từ 1 vì ô đang xét là ô trống
+        for i in range(1, 4):  # Kiểm tra đến 3 ô tiếp theo
+            r, c = row + i * dr, col + i * dc
+            if 0 <= r < ROWS and 0 <= c < COLS and board[r][c] == player:
+                count += 1
+            else:
+                break
+        if count >= 3:  # Nếu có ít nhất 3 quân liên tiếp
+            threats += 1
+        if threats >= 2:  # Nếu đã tìm thấy 2 đường thắng
+            return True
+    return False
+
 def find_double_threat(player):
     """
-    Tìm các ô có thể tạo 2 đường thắng đồng thời.
+    Tìm các ô có thể tạo 2 đường thắng đồng thời cho player.
     """
     for row in range(ROWS):
         for col in range(COLS):
             if board[row][col] == 0:  # Chỉ xét ô trống
-                threats = 0
-                # Kiểm tra các hướng
-                for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
-                    count = 1
-                    for i in range(1, 4):
-                        r, c = row + i * dr, col + i * dc
-                        if 0 <= r < ROWS and 0 <= c < COLS and board[r][c] == player:
-                            count += 1
-                        else:
-                            break
-                    if count >= 3:  # Nếu tìm thấy chuỗi tiềm năng
-                        threats += 1
-                if threats >= 2:  # Double Threat
+                if check_double_threat(row, col, player):
                     return row, col
     return None
+def check_direction(row, col, dr, dc, player, count_needed):
+    count = 0
+    for i in range(count_needed):
+        r, c = row + i * dr, col + i * dc
+        if 0 <= r < ROWS and 0 <= c < COLS and board[r][c] == player:
+            count += 1
+        else:
+            return False
+    return count == count_needed
+
+# Hàm kiểm tra tất cả các hướng cho một ô trống
+def check_all_directions(row, col, player, count_needed):
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+    for dr, dc in directions:
+        if check_direction(row, col, dr, dc, player, count_needed - 1):  # Trừ đi 1 vì ô trống đang xét
+            return True
+    return False
+
+# Hàm chính để tìm kiếm thắng hoặc chặn đối thủ
 def find_block_or_win(player, count_needed):
-   
-        for row in range(ROWS):
-            for col in range(COLS):
-                if board[row][col] == 0:  # Chỉ kiểm tra ô trống
-                    # Kiểm tra tất cả các hướng (ngang, dọc, chéo)
-                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
-                        count = 1  # Đếm số quân của player ở vị trí này (bắt đầu từ 1 vì ô hiện tại là ô trống)
-                        for i in range(1, count_needed):  # Kiểm tra đến số lượng quân cần thiết (3 hoặc 4)
-                            r, c = row + i * dr, col + i * dc
-                            if 0 <= r < ROWS and 0 <= c < COLS and board[r][c] == player:
-                                count += 1
-                            else:
-                                break
-                        # Nếu có đủ quân liên tiếp, chặn ở ô trống hoặc thắng
-                        if count == count_needed:
-                            return row, col
-        return None
+    for row in range(ROWS):
+        for col in range(COLS):
+            if board[row][col] == 0:  # Kiểm tra ô trống
+                if check_all_directions(row, col, player, count_needed):
+                    return row, col
+    return None
+def check_3_in_4(row, col, dr, dc, player):
+    """
+    Kiểm tra nếu có 3 quân của player và 1 ô trống liên tiếp theo hướng (dr, dc) bắt đầu từ (row, col).
+    """
+    count_player = 0
+    empty_count = 0
+    empty_positions = []
+    blocked = False
+
+    for i in range(4):  # Kiểm tra 4 ô liên tiếp
+        r, c = row + i * dr, col + i * dc
+        if 0 <= r < ROWS and 0 <= c < COLS:
+            if board[r][c] == player:
+                count_player += 1
+            elif board[r][c] == 0:
+                empty_count += 1
+                empty_positions.append((r, c))
+            else:  # Ô bị chặn bởi quân đối phương
+                blocked = True
+                break
+        else:  # Nếu ra ngoài bàn cờ
+            blocked = True
+            break
+
+    return count_player, empty_count, empty_positions, blocked
+
+
 def find_3_in_4_to_block(player):
     """
-    Tìm chuỗi 4 ô liên tiếp có 3 quân của player và 1 ô trống:
-    - Chặn ô trống ở giữa nếu có.
-    - Chặn ô đầu hoặc cuối nếu chưa bị chặn bởi quân đối phương.
+    Tìm chuỗi 4 ô liên tiếp có 3 quân của player và 1 ô trống, nếu không bị chặn.
     """
     for row in range(ROWS):
         for col in range(COLS):
+            if board[row][col] != 0:  # Chỉ kiểm tra ô trống
+                continue
+
             # Kiểm tra tất cả các hướng (ngang, dọc, chéo)
             for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
-                count = 0       # Đếm quân player
-                empty_count = 0 # Đếm ô trống
-                empty_positions = [] # Vị trí ô trống
-                blocked = False  # Kiểm tra có bị chặn bởi quân đối phương không
+                count_player, empty_count, empty_positions, blocked = check_3_in_4(row, col, dr, dc, player)
 
-                for i in range(4):  # Duyệt qua 4 ô liên tiếp
-                    r, c = row + i * dr, col + i * dc
-                    if 0 <= r < ROWS and 0 <= c < COLS:
-                        if board[r][c] == player:
-                            count += 1
-                        elif board[r][c] == 0:
-                            empty_count += 1
-                            empty_positions.append((r, c))
-                        else:  # Nếu ô bị chặn bởi đối phương
-                            blocked = True
-                            break
-                    else:
-                        blocked = True
-                        break
+                # Nếu có 3 quân player và 1 ô trống và không bị chặn
+                if count_player == 3 and empty_count == 1 and not blocked:
+                    return empty_positions[0]  # Trả về ô trống cần chặn
 
-                # Nếu có 3 quân player và 1 ô trống, xử lý
-                if count == 3 and empty_count == 1 and not blocked:
-                    return empty_positions[0]  # Trả về ô trống giữa
-
-                # Nếu có 3 quân player và 1 ô trống ở đầu hoặc cuối, không bị chặn
-                if count == 3 and empty_count == 2 and not blocked:
+                # Nếu có 3 quân player và 1 ô trống ở đầu/cuối và không bị chặn
+                if count_player == 3 and empty_count == 2 and not blocked:
                     return empty_positions[0] if empty_positions else None  # Trả về ô đầu/cuối
 
     return None
@@ -391,6 +417,7 @@ def ai_move():
         empty_cells = [(row, col) for row in range(ROWS) for col in range(COLS) if board[row][col] == 0]
         empty_cells.sort(key=lambda x: abs(x[0] - center[0]) + abs(x[1] - center[1]))
         return empty_cells
+    
      # 2. Chặn đối phương thắng nếu họ có 4 quân liên tiếp
     block_move = find_block_or_win(1, 4)
     if block_move:
@@ -527,7 +554,10 @@ def main():
                     if current_player == -1 and not winner and not final_winner:  # Lượt của máy (O)
                         current_player = 1
                         ai_move()  # AI tự động đánh
-                
+                    if winner:
+                        ai_move == False
+                        
+                        
                         
                         
                         
